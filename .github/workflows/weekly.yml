@@ -29,6 +29,7 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m playwright install --with-deps chromium
       - name: Run scan
+        shell: bash
         run: python -m agent.run --limit "${{ github.event.inputs.limit || 0 }}" | tee /tmp/report.md
       - name: Show report in the run summary
         if: always()
