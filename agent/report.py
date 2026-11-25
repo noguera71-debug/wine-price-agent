@@ -90,7 +90,7 @@ def render(today: str, watch: list[dict], rows: list[dict], result: dict, shops:
     missing = [w for w in watch if w["id"] not in found]
     L += ["", f"## Not found in stock anywhere ({len(missing)} of {len(watch)})"]
     L.append(", ".join(f"{w['winery']} {w['wine']} {w['vintage']}".strip() for w in missing) or "None.")
-    L += ["", "## Run problems"]
+    L += ["", "## Run notes"]
     L += [f"- {e}" for e in errors[:30]] or ["None."]
     L += ["", "## Shipping published by each shop"]
     L += [f"- {s['name']}: {s['shipping']}" for s in shops.values()]
