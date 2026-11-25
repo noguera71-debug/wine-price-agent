@@ -1,0 +1,147 @@
+name: Shop probe (one wine, every shop)
+
+# Manual only. For each shop: open the home page, then try a few search URL patterns for one wine
+# and report whether the shop lets GitHub's servers in, and whether the search returns the wine.
+# It never bypasses anything: a bot-verification page is simply reported as BLOCKED and we stop there.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install playwright
+      - run: python -m playwright install --with-deps chromium
+      - name: Probe shops
+        shell: bash
+        run: |
+          python - <<'PY' | tee /tmp/probe.md
+          import re, time, unicodedata
+          from pathlib import Path
+          from urllib.parse import quote_plus
+          from playwright.sync_api import sync_playwright
+
+          EXTRACT_JS = Path("agent/extract.js").read_text(encoding="utf-8")
+          Q1, W1 = "La Stoppa Ageno", ["stoppa", "ageno"]
+          Q2, W2 = "Clos Mogador", ["mogador"]
+          GENERIC = ["/search?q={q}", "/catalogsearch/result/?q={q}", "/search?controller=search&s={q}", "/?s={q}&post_type=product"]
+          # (name, home URL, shop-specific search patterns tried first; generic ones follow)
+          SHOPS = [
+              ("Vins et Millésimes (control)", "https://www.vinsetmillesimes.com/en/", ["/en/search?controller=search&s={q}"]),
+              ("Weinfurore", "https://www.weinfurore.de/", ["/suche?search={q}"]),
+              ("Vinissimus", "https://www.vinissimus.com/es/", ["/es/buscar/?q={q}", "/es/search/?q={q}"]),
+              ("Bodeboca", "https://www.bodeboca.com/", ["/buscar?search_api_fulltext={q}", "/search/node?keys={q}"]),
+              ("Vinatis", "https://www.vinatis.com/", ["/recherche?q={q}", "/recherche?search={q}"]),
+              ("Tannico", "https://www.tannico.it/", ["/catalogsearch/result/?q={q}", "/ricerca?q={q}"]),
+              ("Enterwine", "https://www.enterwine.com/", ["/es/search?q={q}"]),
+              ("Maitre Philippe", "https://www.maitrephilippe.com/", ["/catalogsearch/result/?q={q}"]),
+              ("xtrawine", "https://www.xtrawine.com/en/", ["/en/search?q={q}", "/en/catalogsearch/result/?q={q}"]),
+              ("Decántalo", "https://www.decantalo.com/es/en/", ["/es/en/search?controller=search&s={q}", "/es/es/search?controller=search&s={q}"]),
+              ("Gourmet Hunters", "https://www.gourmethunters.com/en/", ["/en/search/?search={q}", "/en/search?q={q}"]),
+              ("Callmewine", "https://www.callmewine.com/en/", ["/en/search?q={q}"]),
+              ("8wines", "https://8wines.fr/", ["/boutique?search={q}"]),
+              ("Bottle of Italy", "https://www.bottleofitaly.com/", ["/search?q={q}"]),
+              ("Twil", "https://www.twil.fr/", ["/recherche?q={q}", "/search?q={q}"]),
+              ("Pétites Caves", "https://www.petitescaves.com/", ["/recherche?q={q}"]),
+              ("Coalla gourmet", "https://coallagourmet.com/en/", ["/en/search?controller=search&s={q}"]),
+              ("Cuvée3000 (domain guessed)", "https://www.cuvee3000.com/", []),
+              ("La tienda del Retro (domain guessed)", "https://www.latiendadelretro.com/", []),
+              ("A la Volée (domain guessed)", "https://www.alavolee.com/", []),
+              ("Locos por las Burbujas (domain guessed)", "https://www.locosporlasburbujas.com/", []),
+          ]
+          BLOCK_RE = re.compile(r"just a moment|attention required|access denied|security verification|verify you are human|captcha|pardon our interruption|request blocked|are you a human|checking your browser|temporarily blocked", re.I)
+
+          def base(u):
+              return u.split("//")[0] + "//" + u.split("//")[1].split("/")[0]
+
+          def fold(s):
+              return unicodedata.normalize("NFKD", s.lower()).encode("ascii", "ignore").decode()
+
+          def visit(page, url):
+              try:
+                  resp = page.goto(url, wait_until="domcontentloaded", timeout=25000)
+                  try:
+                      page.wait_for_load_state("networkidle", timeout=8000)
+                  except Exception:
+                      pass
+                  time.sleep(1.0)
+                  status = resp.status if resp else 0
+                  title = page.title()
+                  body = page.inner_text("body")[:300].replace("\n", " ")
+                  blocked = status in (403, 429) or bool(BLOCK_RE.search(title + " " + body))
+                  return dict(status=status, title=title, blocked=blocked, error=None)
+              except Exception as e:
+                  return dict(status=0, title="", blocked=False, error=f"{type(e).__name__}: {str(e).splitlines()[0][:80]}")
+
+          def hits(page, words):
+              items = page.evaluate(EXTRACT_JS)
+              good = [i for i in items if any(w in fold(i["name"] + " " + i["url"]) for w in words)]
+              return len(items), good
+
+          rows = []
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True)
+              for name, home, pats in SHOPS:
+                  ctx = browser.new_context(locale="en-GB", user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36")
+                  page = ctx.new_page()
+                  row = dict(name=name, home="", verdict="", pattern="", q1="", q2="", sample="")
+                  h = visit(page, home)
+                  row["home"] = h["error"] or f'HTTP {h["status"]} "{h["title"][:40]}"'
+                  if h["error"]:
+                      row["verdict"] = "UNREACHABLE"
+                  elif h["blocked"]:
+                      row["verdict"] = "BLOCKED"
+                  else:
+                      row["verdict"] = "reachable, search URL not found"
+                      tried = []
+                      for pat in (pats + GENERIC)[:6]:
+                          time.sleep(2)
+                          r = visit(page, base(home) + pat.format(q=quote_plus(Q1)))
+                          if r["blocked"]:
+                              row["verdict"] = "BLOCKED (on search)"
+                              break
+                          if r["error"] or r["status"] >= 400:
+                              tried.append(f'{pat} -> {r["error"] or r["status"]}')
+                              continue
+                          n, good = hits(page, W1)
+                          tried.append(f"{pat} -> {n} cards, {len(good)} relevant")
+                          if good:
+                              row["verdict"] = "OK"
+                              row["pattern"] = pat
+                              row["q1"] = f"{n} cards, {len(good)} relevant"
+                              g = good[0]
+                              row["sample"] = f'{g["name"][:50]} {g["price"]} EUR' + ("" if g["in_stock"] else " (out of stock)")
+                              time.sleep(2)
+                              visit(page, base(home) + pat.format(q=quote_plus(Q2)))
+                              n2, good2 = hits(page, W2)
+                              row["q2"] = f"{n2} cards, {len(good2)} relevant"
+                              break
+                      if row["verdict"] != "OK" and not row["verdict"].startswith("BLOCKED"):
+                          row["pattern"] = "; ".join(tried)[:200]
+                  rows.append(row)
+                  ctx.close()
+                  time.sleep(2)
+              browser.close()
+
+          print("## Shop probe: one wine, every shop (run from GitHub's servers)\n")
+          print(f"Queries: `{Q1}` and `{Q2}`. A shop is OK when its search page contains a product matching the query.\n")
+          print("| Shop | Home page | Verdict | Search pattern / tries | Ageno | Mogador | Sample |")
+          print("|---|---|---|---|---|---|---|")
+          for r in rows:
+              print(f'| {r["name"]} | {r["home"]} | **{r["verdict"]}** | {r["pattern"]} | {r["q1"]} | {r["q2"]} | {r["sample"]} |')
+          ok = sum(r["verdict"] == "OK" for r in rows)
+          bl = sum(r["verdict"].startswith("BLOCKED") for r in rows)
+          un = sum(r["verdict"] == "UNREACHABLE" for r in rows)
+          print(f"\nOK: {ok} | blocked: {bl} | unreachable: {un} | reachable but URL unknown: {len(rows) - ok - bl - un}")
+          PY
+      - name: Show result in the run summary
+        if: always()
+        run: cat /tmp/probe.md >> "$GITHUB_STEP_SUMMARY" || true
