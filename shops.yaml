@@ -1,0 +1,33 @@
+# One entry per shop. 'search' is a URL template; {q} is the URL-encoded query.
+# verified: true  -> search URL confirmed in a real browser on 2026-11-25.
+# verified: false -> not yet confirmed; the first run will show whether it returns cards.
+# shipping: free-text note of what the shop PUBLISHES (no address was ever entered).
+shops:
+  vinsetmillesimes:
+    name: Vins et Millésimes
+    search: "https://www.vinsetmillesimes.com/en/search?controller=search&s={q}"
+    verified: true      # extractor output matched the live page exactly (Grivault test, 2026-11-25)
+    enabled: true
+    shipping: "International shipping 'our rates'; tariff not shown on product page"
+  decantalo:
+    name: Decántalo
+    search: "https://www.decantalo.com/es/en/search?controller=search&s={q}"
+    verified: false   # form found; the extractor found 0 cards on a test search
+    enabled: false
+    shipping: "UPS, per-country tariff; not shown on product page"
+  gourmethunters:
+    name: Gourmet Hunters
+    search: "https://www.gourmethunters.com/en/search/?search={q}"
+    verified: false   # test search ignored the query and returned an unrelated list; needs a different URL
+    enabled: false
+    shipping: "Spain DHL: 6.95 EUR for 6 bottles, free from 200 EUR (seen 2026-11-25 on a product page)"
+  xtrawine:
+    name: xtrawine
+    search: "https://www.xtrawine.com/en/search?q={q}"
+    verified: false   # search URL is a guess
+    enabled: false
+    shipping: "Not published; only shown at checkout (needs an address)"
+# Not yet added (search form is JavaScript-driven, URL unknown): Weinfurore, Vinissimus, Bodeboca,
+# Vinatis, Tannico, Enterwine, Maitre Philippe, Callmewine, 8wines, Bottle of Italy.
+# The seven shops Ramon already uses but that were never searched (La tienda del Retro, A la Volée,
+# Locos por las Burbujas, Cuvée3000, Pétites Caves, Twil, Coalla gourmet) still need domains.

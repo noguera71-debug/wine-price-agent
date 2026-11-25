@@ -1,0 +1,9 @@
+# Optional per-wine search overrides, keyed by the Vivino wine id (last number in vivino_link).
+# query: text sent to each shop's search box.
+# match: extra words that must appear in a result's name (all of them), to avoid cuvée mix-ups.
+"156748447": {query: "Prager Wachstum Bodenstein", match: ["riesling"]}
+"177693890": {query: "Prager Zwerithaler", match: ["zwerithaler"]}
+"169603961": {query: "Chevreux-Bournazel", match: ["parcelle"]}
+"177422189": {query: "Delalot Impression", match: ["impression"]}
+"163234251": {query: "Chassorney Combe Bazin", match: ["combe", "bazin"]}
+"143898214": {query: "Grivault Murger", match: ["murger"]}
