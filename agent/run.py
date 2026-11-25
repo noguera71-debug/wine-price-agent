@@ -41,7 +41,7 @@ def main():
     history = json.loads(hist_path.read_text()) if hist_path.exists() else {}
 
     from .scrape import scrape
-        rows, errors, cards = [], [], {k: 0 for k in shops}
+    rows, errors, cards = [], [], {k: 0 for k in shops}
     for wine, shop, items, err in scrape(watch, shops, queries):
         if err:
             errors.append(f"{wine['winery']} {wine['wine']} @ {shop}: {err}")
@@ -55,8 +55,8 @@ def main():
                              "listing_name": it["name"], "listing_vintage": match.listing_vintage(it["name"]),
                              "price": it["price"], "in_stock": it["in_stock"], "url": it["url"]})
     for shop, n in cards.items():
-       errors.append(f"Info: {shops[shop]['name']} returned {n} product cards across {len(watch)} searches"
-                     + (" - ZERO: the shop may be blocking GitHub's servers, or its search page changed" if n == 0 else ""))
+        errors.append(f"Info: {shops[shop]['name']} returned {n} product cards across {len(watch)} searches"
+                      + (" - ZERO: the shop may be blocking GitHub's servers, or its search page changed" if n == 0 else ""))
     # same product can appear twice on one page; keep one row per url
     rows = list({(r["shop"], r["wine_id"], r["url"]): r for r in rows}.values())
 
