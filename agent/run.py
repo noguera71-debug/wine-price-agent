@@ -42,7 +42,11 @@ def main():
 
     from .scrape import scrape
     rows, errors, cards = [], [], {k: 0 for k in shops}
+    blocked = {k: 0 for k in shops}
     for wine, shop, items, err in scrape(watch, shops, queries):
+        if err and err.startswith("BLOCKED"):
+            blocked[shop] += 1          # summarised once per shop below, not once per wine
+            continue
         if err:
             errors.append(f"{wine['winery']} {wine['wine']} @ {shop}: {err}")
             continue
@@ -55,8 +59,13 @@ def main():
                              "listing_name": it["name"], "listing_vintage": match.listing_vintage(it["name"]),
                              "price": it["price"], "in_stock": it["in_stock"], "url": it["url"]})
     for shop, n in cards.items():
-        errors.append(f"Info: {shops[shop]['name']} returned {n} product cards across {len(watch)} searches"
-                      + (" - ZERO: the shop may be blocking GitHub's servers, or its search page changed" if n == 0 else ""))
+        if blocked[shop]:
+            errors.append(f"BLOCKED: {shops[shop]['name']} showed a bot-verification page ({blocked[shop]} of "
+                          f"{len(watch)} searches); not scanned this week and not bypassed")
+        else:
+            errors.append(f"Info: {shops[shop]['name']} returned {n} product cards across {len(watch)} searches"
+                          + (" - none at all: the shop may not stock these wines, or its search page changed"
+                             if n == 0 else ""))
     # same product can appear twice on one page; keep one row per url
     rows = list({(r["shop"], r["wine_id"], r["url"]): r for r in rows}.values())
 
