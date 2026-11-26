@@ -1,33 +1,118 @@
 # One entry per shop. 'search' is a URL template; {q} is the URL-encoded query.
-# verified: true  -> search URL confirmed in a real browser on 2026-11-25.
-# verified: false -> not yet confirmed; the first run will show whether it returns cards.
+# enabled: true   -> scanned every Monday from GitHub's servers.
+# blocked: true   -> the shop shows a bot-verification page to GitHub's servers (probe run 2026-11-25).
+#                    It is NOT scanned and NOT bypassed. Priority wines are meant to be checked for these
+#                    shops with a separate Claude check in Ramon's own Chrome.
+# verified: true  -> search address confirmed (in a real browser or by the probe run) on 2026-11-25.
 # shipping: free-text note of what the shop PUBLISHES (no address was ever entered).
 shops:
-  vinsetmillesimes:
-    name: Vins et Millésimes
-    search: "https://www.vinsetmillesimes.com/en/search?controller=search&s={q}"
-    verified: true      # extractor output matched the live page exactly (Grivault test, 2026-11-25)
-    enabled: true
-    shipping: "International shipping 'our rates'; tariff not shown on product page"
-  decantalo:
-    name: Decántalo
-    search: "https://www.decantalo.com/es/en/search?controller=search&s={q}"
-    verified: false   # form found; the extractor found 0 cards on a test search
-    enabled: false
-    shipping: "UPS, per-country tariff; not shown on product page"
-  gourmethunters:
-    name: Gourmet Hunters
-    search: "https://www.gourmethunters.com/en/search/?search={q}"
-    verified: false   # test search ignored the query and returned an unrelated list; needs a different URL
-    enabled: false
-    shipping: "Spain DHL: 6.95 EUR for 6 bottles, free from 200 EUR (seen 2026-11-25 on a product page)"
+  # ---------------- scanned from GitHub ----------------
   xtrawine:
     name: xtrawine
     search: "https://www.xtrawine.com/en/search?q={q}"
-    verified: false   # search URL is a guess
-    enabled: false
+    verified: true      # probe: La Stoppa found at 27 EUR
+    enabled: true
     shipping: "Not published; only shown at checkout (needs an address)"
-# Not yet added (search form is JavaScript-driven, URL unknown): Weinfurore, Vinissimus, Bodeboca,
-# Vinatis, Tannico, Enterwine, Maitre Philippe, Callmewine, 8wines, Bottle of Italy.
-# The seven shops Ramon already uses but that were never searched (La tienda del Retro, A la Volée,
-# Locos por las Burbujas, Cuvée3000, Pétites Caves, Twil, Coalla gourmet) still need domains.
+  tannico:
+    name: Tannico
+    search: "https://www.tannico.it/search?q={q}"
+    verified: false     # probe reached a results page, but the hit looked like a page heading; confirm
+    enabled: true
+    shipping: "Not checked yet"
+  twil:
+    name: Twil
+    search: "https://www.twil.fr/twilsearch/preview/?q={q}"
+    verified: true      # La Stoppa found in Chrome (Riostoppa 2014, 33.15 EUR)
+    enabled: true
+    shipping: "Price shown is for France (delivery country selector); a promo page quoted 6.90 EUR home delivery from 6 bottles. Check the current tariff."
+  petitescaves:
+    name: Pétites Caves
+    search: "https://www.petitescaves.com/en/search?q={q}"
+    verified: true      # Chrome: results page with '0 result' for La Stoppa Ageno
+    enabled: true
+    shipping: "Not checked yet"
+  vinissimus:
+    name: Vinissimus
+    search: "https://www.vinissimus.com/es/search-result/?name={q}&notavailable=true"
+    verified: true      # Chrome: fuzzy search (hundreds of results); matching filters them
+    enabled: true
+    shipping: "Spain: free transport from 200 EUR; below that not seen"
+  vinatis:
+    name: Vinatis
+    search: "https://www.vinatis.com/recherche?q={q}"
+    verified: true      # Chrome: valid search page; no La Stoppa
+    enabled: true
+    shipping: "Delivery country defaults to France; check Spain tariff"
+  bottleofitaly:
+    name: Bottle of Italy
+    search: "https://bottleofitaly.com/search?q={q}"
+    verified: true      # Chrome: results page; relevance order is odd (unrelated wines first)
+    enabled: true
+    shipping: "Not checked yet"
+  elretrogusto:
+    name: La tienda del Retro
+    search: "https://tienda.elretrogusto.es/?s={q}&post_type=product"
+    verified: true      # Chrome: search results are in the page underneath the age gate; no La Stoppa
+    enabled: true
+    shipping: "Not checked yet. The shop shows an age-verification form (date of birth); it is never filled in."
+  coalla:
+    name: Coalla gourmet
+    search: "https://coallagourmet.com/en/search?controller=search&s={q}"
+    verified: true      # probe: search works; no La Stoppa / Mogador (Spanish wines may match)
+    enabled: true
+    shipping: "Not checked yet"
+
+  # ---------------- blocked for GitHub's servers (not scanned, not bypassed) ----------------
+  vinsetmillesimes:
+    name: Vins et Millésimes
+    search: "https://www.vinsetmillesimes.com/en/search?controller=search&s={q}"
+    verified: true
+    enabled: false
+    blocked: true       # HTTP 403 'Just a moment...' on home and search. Ramon: not a priority.
+    shipping: "International shipping 'our rates'; tariff not shown on product page"
+  weinfurore:
+    name: Weinfurore
+    search: ""
+    enabled: false
+    blocked: true       # HTTP 403 on the home page
+    shipping: "Plus shipping (not published)"
+  decantalo:
+    name: Decántalo
+    search: "https://www.decantalo.com/es/en/search?controller=search&s={q}"
+    enabled: false
+    blocked: true       # HTTP 403 on the home page
+    shipping: "UPS, per-country tariff; not shown on product page"
+  bodeboca:
+    name: Bodeboca
+    search: ""
+    enabled: false
+    blocked: true       # home loads, search blocked
+    shipping: "Not checked"
+  enterwine:
+    name: Enterwine
+    search: ""
+    enabled: false
+    blocked: true       # home loads, search blocked
+    shipping: "Not checked"
+  gourmethunters:
+    name: Gourmet Hunters
+    search: ""
+    enabled: false
+    blocked: true       # home loads, search blocked
+    shipping: "Spain DHL: 6.95 EUR for 6 bottles, free from 200 EUR (seen 2026-11-25 on a product page)"
+  8wines:
+    name: 8wines
+    search: ""
+    enabled: false
+    blocked: true       # home loads, search blocked. Not a priority.
+    shipping: "Not checked"
+  locosporlasburbujas:
+    name: Locos por las Burbujas
+    search: ""
+    enabled: false
+    blocked: true       # 'Robot Challenge Screen'. Not a priority.
+    shipping: "Not checked"
+
+# Still unsolved: Callmewine (search page loads but shows nothing; JavaScript search), Cuvée3000 (domain
+# works, search address unknown), Maitre Philippe (certificate error on www.maitrephilippe.com; not bypassed).
+# Out: A la Volée (needs a login to search).
